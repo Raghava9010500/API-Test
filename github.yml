@@ -1,29 +1,48 @@
-stage: test
-script:
-  - pwd
-  # Clear npm and Playwright cache
-  - npm cache clean --force
-  # Clear any existing node_modules
-  - rm -rf node_modules
-  # Clear Playwright cache
-  - rm -rf ~/.cache/ms-playwright
-  # Install dependencies
-  - npm install
-  - npm i -D @playwright/test allure-playwright
-  # Run tests
-  - xvfb-run --auto-servernum npm run test:multi stg parallel 6
-  # Generate Allure report
-  - npx allure generate allure-results -o test-results/allure-report
-timeout: 5h
-artifacts:
-  when: always
-  name: "playwright-reports-$CI_JOB_NAME-$CI_COMMIT_SHORT_SHA"
-  expire_in: 2 weeks
-  paths:
-    - test-results/
-    - "*.log"
-  exclude:
-    - test-results/videos/          # Exclude large files
-    - test-results/screenshots/     # Optional
-reports:
-  junit: test-results/junit.xml
+test:
+  runs-on: windows-latest
+  timeout-minutes: 300
+
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Show working directory
+      run: pwd
+
+    - name: Clear npm and Playwright cache
+      shell: pwsh
+      run: |
+        npm cache clean --force
+        Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue
+        Remove-Item -Recurse -Force "$env:USERPROFILE\\AppData\\Local\\ms-playwright" -ErrorAction SilentlyContinue
+
+    - name: Install dependencies
+      run: |
+        npm install
+        npm i -D @playwright/test allure-playwright
+
+    - name: Install Playwright Browsers
+      run: npx playwright install
+
+    - name: Run Playwright Tests
+      run: npx playwright test
+
+    - name: Generate Allure Report
+      run: npx allure generate allure-results -o test-results/allure-report
+
+    - name: Upload artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: playwright-reports-${{ github.job }}-${{ github.sha }}
+        path: |
+          test-results/
+          *.log
+        retention-days: 14
+
+    - name: Upload JUnit XML
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: junit-report
+        path: test-results/junit.xml
