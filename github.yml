@@ -1,48 +1,74 @@
-test:
-  runs-on: windows-latest
-  timeout-minutes: 300
+name: Playwright Test
 
-  steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+on:
+  push:
+  pull_request:
 
-    - name: Show working directory
-      run: pwd
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300   # 5 hours (same as 5h)
 
-    - name: Clear npm and Playwright cache
-      shell: pwsh
-      run: |
-        npm cache clean --force
-        Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue
-        Remove-Item -Recurse -Force "$env:USERPROFILE\\AppData\\Local\\ms-playwright" -ErrorAction SilentlyContinue
+    steps:
+      # 1. Checkout code
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Install dependencies
-      run: |
-        npm install
-        npm i -D @playwright/test allure-playwright
+      # 2. Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
 
-    - name: Install Playwright Browsers
-      run: npx playwright install
+      # 3. Show working directory (pwd)
+      - name: Show working directory
+        run: pwd
 
-    - name: Run Playwright Tests
-      run: npx playwright test
+      # 4. Clear npm cache & any existing node_modules
+      - name: Clear npm & Node modules
+        run: |
+          npm cache clean --force
+          rm -rf node_modules
 
-    - name: Generate Allure Report
-      run: npx allure generate allure-results -o test-results/allure-report
+      # 5. Clear Playwright cache
+      - name: Clear Playwright cache
+        run: rm -rf ~/.cache/ms-playwright
 
-    - name: Upload artifacts
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: playwright-reports-${{ github.job }}-${{ github.sha }}
-        path: |
-          test-results/
-          *.log
-        retention-days: 14
+      # 6. Install dependencies
+      - name: Install dependencies
+        run: |
+          npm install
+          npm i -D @playwright/test allure-playwright
 
-    - name: Upload JUnit XML
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: junit-report
-        path: test-results/junit.xml
+      # 7. Install Playwright browsers
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      # 8. Run tests using xvfb
+      - name: Run Playwright tests
+        run: |
+          xvfb-run --auto-servernum npm run test:multi stg parallel 6
+
+      # 9. Generate Allure Report
+      - name: Generate Allure Report
+        run: |
+          npx allure generate allure-results -o test-results/allure-report --clean
+
+      # 10. Upload Allure & test artifacts
+      - name: Upload Test Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-reports-${{ github.run_id }}
+          path: |
+            test-results/
+            *.log
+          retention-days: 14
+          if-no-files-found: warn
+
+      # 11. Upload JUnit report for GitHub
+      - name: Upload JUnit Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-report
+          path: test-results/junit.xml
+          retention-days: 14
