@@ -1,71 +1,67 @@
-name: Playwright Test
+name: Playwright Test (Windows)
 
 on:
   push:
+    branches:
+      - "Feature/api test"
   pull_request:
+    branches:
+      - "Feature/api test"
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-    timeout-minutes: 300   # 5 hours (same as 5h)
+    runs-on: windows-latest
+    timeout-minutes: 300   # 5 hours
 
     steps:
-      # 1. Checkout code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      # 3. Show working directory (pwd)
       - name: Show working directory
         run: pwd
 
-      # 4. Clear npm cache & any existing node_modules
       - name: Clear npm & Node modules
         run: |
           npm cache clean --force
-          rm -rf node_modules
+          if (Test-Path node_modules) { Remove-Item -Recurse -Force node_modules }
 
-      # 5. Clear Playwright cache
       - name: Clear Playwright cache
-        run: rm -rf ~/.cache/ms-playwright
+        run: |
+          if (Test-Path "$env:USERPROFILE\AppData\Local\ms-playwright") { 
+            Remove-Item -Recurse -Force "$env:USERPROFILE\AppData\Local\ms-playwright" 
+          }
 
-      # 6. Install dependencies
       - name: Install dependencies
         run: |
           npm install
           npm i -D @playwright/test allure-playwright
 
-      # 7. Install Playwright browsers
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
+        run: npx playwright install
 
-      # 8. Run tests using xvfb
       - name: Run Playwright tests
-        run: |
-          xvfb-run --auto-servernum npm run test:multi stg parallel 6
+        run: npm run test:multi stg parallel 6
 
-      # 9. Generate Allure Report
       - name: Generate Allure Report
         run: |
           npx allure generate allure-results -o test-results/allure-report --clean
 
-      # 10. Upload Allure & test artifacts
       - name: Upload Test Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: playwright-reports-${{ github.run_id }}
           path: |
             test-results/
+            test-results/allure-report/
             *.log
           retention-days: 14
           if-no-files-found: warn
 
-      # 11. Upload JUnit report for GitHub
       - name: Upload JUnit Report
         uses: actions/upload-artifact@v4
         with:
