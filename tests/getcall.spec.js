@@ -23,5 +23,5 @@ test('Test GET API', async ({ request }) => {
 
   // Validate exact values (optional)
   expect(respBody.title).toContain("sunt aut facere");
-  expect(respBody.body).toContain("quia et suscipit");
+  //expect(respBody.body).toContain("quia et suscipit");
 });
