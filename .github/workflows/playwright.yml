@@ -5,6 +5,9 @@ on:
   pull_request:
     branches: [ main, master, feature/APITest ]
 
+     # schedule:
+     - cron: '0 4 * * *' # Daily run at 04:00 AM UTC
+
 jobs:
   test:
     timeout-minutes: 60
@@ -26,16 +29,16 @@ jobs:
     # Install Allure Commandline
     - name: Install Allure CLI
       run: |
-        npm install -g allure-commandline --save-dev
+        npm i -D @playwright/test allure-playwright
 
     - name: Run Playwright Tests with Allure
       run: |
-        npx playwright test --reporter=line,allure-playwright
+        npx playwright test 
 
     - name: Generate Allure Report
       if: ${{ always() }}
       run: |
-        allure generate allure-results --clean -o allure-report
+       npx allure generate allure-results -o test-results/allure-report
 
     - name: Upload Allure Report Artifact
       if: ${{ always() }}
