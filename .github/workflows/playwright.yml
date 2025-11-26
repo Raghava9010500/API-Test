@@ -1,65 +1,27 @@
 name: Playwright Tests
-
 on:
   push:
-    branches:
-      - main
-      - master
-      - "Feature/api test"
+    branches: [ main, master, feature/APITest]
   pull_request:
-    branches:
-      - main
-      - master
-      - "Feature/api test"
-
+    branches: [ main, master, feature/APITest ]
 jobs:
   test:
     timeout-minutes: 60
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        os: [ ubuntu-latest, windows-latest ]
-
+    runs-on: ubuntu-latest
     steps:
-    # 1. Checkout code
-    - uses: actions/checkout@v4
-
-    # 2. Setup Node
-    - uses: actions/setup-node@v4
+    - uses: actions/checkout@v5
+    - uses: actions/setup-node@v5
       with:
         node-version: lts/*
-
-    # 3. Install dependencies
     - name: Install dependencies
       run: npm ci
-
-    # 4. Install Playwright browsers
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
-
-    # 5. Run Playwright tests with Allure
-    - name: Run Playwright Tests (Allure)
-      run: npx playwright test --reporter=line,allure-playwright
-
-    # 6. Generate Allure Report
-    - name: Generate Allure Report
-      run: |
-        npx allure generate --clean allure-results -o allure-report
-
-    # 7. Upload Allure Report
-    - name: Upload Allure Report
-      uses: actions/upload-artifact@v4
-      if: ${{ !cancelled() }}
-      with:
-        name: allure-report-${{ matrix.os }}
-        path: allure-report/
-        retention-days: 30
-
-    # 8. Upload Playwright HTML report
+    - name: Run Playwright tests
+      run: npx playwright test
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:
-        name: playwright-report-${{ matrix.os }}
+        name: playwright-report
         path: playwright-report/
         retention-days: 30
