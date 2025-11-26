@@ -1,27 +1,62 @@
 name: Playwright Tests
 on:
   push:
-    branches: [ main, master, feature/APITest]
+    branches: [ main, master, feature/APITest ]
   pull_request:
     branches: [ main, master, feature/APITest ]
+
 jobs:
   test:
     timeout-minutes: 60
     runs-on: ubuntu-latest
+
     steps:
     - uses: actions/checkout@v5
+
     - uses: actions/setup-node@v5
       with:
         node-version: lts/*
+
     - name: Install dependencies
       run: npm ci
+
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
-    - name: Run Playwright tests
-      run: npx playwright test
-    - uses: actions/upload-artifact@v4
+
+    # Install Allure Commandline
+    - name: Install Allure CLI
+      run: |
+        npm install -g allure-commandline --save-dev
+
+    - name: Run Playwright Tests with Allure
+      run: |
+        npx playwright test --reporter=line,allure-playwright
+
+    - name: Generate Allure Report
+      if: ${{ always() }}
+      run: |
+        allure generate allure-results --clean -o allure-report
+
+    - name: Upload Allure Report Artifact
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: allure-report
+        path: allure-report
+        retention-days: 30
+
+    - name: Upload Playwright Report Artifact
       if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@v4
       with:
         name: playwright-report
         path: playwright-report/
         retention-days: 30
+
+    # OPTIONAL: Deploy Allure report to GitHub Pages (enable if needed)
+    # - name: Deploy Allure Report to GitHub Pages
+    #   if: ${{ always() }}
+    #   uses: peaceiris/actions-gh-pages@v3
+    #   with:
+    #     github_token: ${{ secrets.GITHUB_TOKEN }}
+    #     publish_dir: allure-report
