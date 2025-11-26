@@ -1,12 +1,12 @@
 name: Playwright Tests
+
 on:
   push:
     branches: [ main, master, feature/APITest ]
   pull_request:
     branches: [ main, master, feature/APITest ]
-
-     # schedule:
-     - cron: '0 4 * * *' # Daily run at 04:00 AM UTC
+  schedule:
+    - cron: '0 4 * * *' # Daily run at 04:00 AM UTC
 
 jobs:
   test:
@@ -14,9 +14,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v4
 
-    - uses: actions/setup-node@v5
+    - uses: actions/setup-node@v4
       with:
         node-version: lts/*
 
@@ -29,16 +29,17 @@ jobs:
     # Install Allure Commandline
     - name: Install Allure CLI
       run: |
-        npm i -D @playwright/test allure-playwright
+        npm install -D allure-commandline
+        npm install -D @playwright/test allure-playwright
 
     - name: Run Playwright Tests with Allure
       run: |
-        npx playwright test 
+        npx playwright test --reporter=line,allure-playwright
 
     - name: Generate Allure Report
       if: ${{ always() }}
       run: |
-       npx allure generate allure-results -o test-results/allure-report
+        npx allure generate allure-results -o allure-report --clean
 
     - name: Upload Allure Report Artifact
       if: ${{ always() }}
@@ -48,7 +49,7 @@ jobs:
         path: allure-report
         retention-days: 30
 
-    - name: Upload Playwright Report Artifact
+    - name: Upload Playwright HTML Report
       if: ${{ !cancelled() }}
       uses: actions/upload-artifact@v4
       with:
